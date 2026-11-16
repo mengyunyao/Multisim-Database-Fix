@@ -6,7 +6,7 @@ if not exist "%CSC%" (
     pause
     exit /b 1
 )
-"%CSC%" /nologo /r:System.dll /out:"%TEMP%\FixMultisimDatabase.exe" "%~dp0FixDatabase.cs"
+"%CSC%" /nologo /r:System.dll /r:System.Xml.dll /out:"%TEMP%\FixMultisimDatabase.exe" "%~dp0FixDatabase.cs"
 if errorlevel 1 (
     echo [ERROR] Failed to compile FixDatabase.cs.
     pause
