@@ -1,61 +1,58 @@
-# Multisim “主数据库无法访问”一键修复工具 (Multisim-Database-Fix)
+# Multisim 14.x 安装与主数据库报错一键修复工具 (Multisim-Fix-Tool)
 
-专门解决 NI Multisim 14.x（`14.0` / `14.1` / `14.2` / `14.3`）在 Windows 10 / Windows 11 系统下启动时弹出：
-
-> **访问数据库时发生错误。**
-> **主数据库 无法访问。使用 主数据库 的功能将不可用。**
-> *(There was an error accessing the Database. The Master Database cannot be accessed. Features using the Master Database will not be available.)*
-
-导致元件库一片空白、无法放置元器件的问题。
+针对 NI Multisim 14.x（`14.0` / `14.1` / `14.2` / `14.3`）在 Windows 10 / Windows 11 系统下最常见的三大顽疾，提供**零第三方依赖、全自动提权、跨盘符通用**的一键修复脚本。
 
 ---
 
-## 为什么卸载重装 Multisim 后还是报这个错？
+## 解决哪些问题？
 
-很多同学遇到这个报错后尝试把 Multisim 卸载重装，甚至重装好几次后发现**依然报同一个错**。这是因为 Windows 卸载程序只会删除安装目录（`Program Files (x86)`），而**绝对不会删除**以下隐藏目录中的残留数据：
-1. `%AppData%\National Instruments\Circuit Design Suite\<版本>\config` 中已经损坏的用户配置文件与错误路径缓存；
-2. `C:\ProgramData\National Instruments\Circuit Design Suite\<版本>\database` 下未释放的 `.ldb` 数据库死锁文件、只读属性（Read-Only）以及受限的文件夹安全权限（ACL）；
-3. 64 位系统下 `Microsoft Jet 4.0` 数据库引擎注册表项权限异常或第三方冲突 DLL。
-
-因此，只要不清理这些隐藏残留并修复权限，重装多少次都会继续报错。
-
----
-
-## 使用方法（傻瓜式一键修复）
-
-1. 下载本仓库（点击右上角 `Code` -> `Download ZIP` 并解压到任意位置）。
-2. 双击运行 **[`Fix_Multisim_Database.bat`](./Fix_Multisim_Database.bat)**。
-3. 在弹出的管理员权限窗口（UAC）中点击 **“是”**。
-4. 看到 `[SUCCESS] Master Database repair completed!` 提示后按回车关闭窗口，重新打开 Multisim 即可恢复正常！
+### 1. 安装时报错 `NIPMCommError` / `Packages.gz 无效`
+* **常见报错提示**：
+  > `更新所有源失败。详细信息请访问ni.com/info，输入信息代码NIPMCommError进行查询。`
+  > `源URI '...\setup\bin\./ni-package-manager-packages/Packages.gz'无效。`
+  > `无法找到包含兼容版本和架构的程序包'ni-package-manager'。`
+* **原因**：部分解压软件在解压安装包时开启了“自动解压嵌套压缩包”，将安装源目录中的 `Packages.gz` 解压成了未压缩的 `Packages` 文件并删除了原 `.gz` 归档，导致 NI Package Manager 无法读取组件源。
+* **对应脚本**：双击运行 **`1_Fix_Installer_PackagesGz.bat`**（支持放在安装包目录下自动识别，或按提示将 `setup` 文件夹拖入窗口），1 秒重新生成所有缺失的 `Packages.gz` 并自动启动安装程序。
 
 ---
 
-## 本工具自动完成了哪些操作？
-
-| 步骤 | 自动修复内容 |
-| :--- | :--- |
-| **Step 1** | 自动检测并关闭后台未退出的 `multisim.exe` / `ultiboard.exe` / `SimServer.exe` 进程，释放文件占用锁。 |
-| **Step 2** | 自动定位 `%AppData%\National Instruments\Circuit Design Suite` 下所有版本的残留 `config` 文件夹，将其备份重命名为 `config_bak_<时间戳>`，强制 Multisim 在下次启动时生成全新的默认配置。 |
-| **Step 3** | 自动扫描 `C:\ProgramData`、用户文档以及所有本地硬盘（`C:` ~ `Z:`）下的 Multisim 数据库目录，清除所有 `.ldb` 死锁文件与只读（Read-Only）属性，并通过 `icacls` 赋予完全控制权限。 |
-| **Step 4** | 自动修复 Windows 注册表中 `HKLM\SOFTWARE\WOW6432Node\Microsoft\Jet\4.0\Engines` 的访问控制权限。 |
-| **Step 5** | 自动排查并隔离安装目录下可能引起数据库引擎崩溃的冲突动态库（`libeay32.dll` / `libiconv-2.dll` / `libpq.dll`），并将 `multisim.exe` 配置为默认以管理员身份启动（`RUNASADMIN`）。 |
-
----
-
-## 补充说明（针对 Windows 11 最新系统更新用户）
-
-如果运行本工具后，在部分中文版 Windows 11 系统上仍然报错，通常是遇到了微软近期推送的 Windows 11 累积更新（如 `KB5065426`）与 Multisim `14.3.0` 早期版本的底层区域兼容性问题。可通过以下任一方式解决：
-* **方式 A（推荐）**：打开电脑开始菜单中的 **NI Package Manager** -> 点击 **更新 (Updates)**，将 `NI Circuit Design Suite` 升级至官方修复版 **`14.3.3`**。
-* **方式 B（应急）**：弹出“主数据库无法访问”小窗时**不要点确定关闭它**，直接回桌面再次双击 Multisim 图标多开第 2~3 个窗口，后续窗口即可绕过锁定正常加载元件库。
+### 2. 打开软件时报错 `访问数据库时发生错误。主数据库 无法访问`
+* **常见报错提示**：
+  > `访问数据库时发生错误。`
+  > `主数据库 无法访问。使用 主数据库 的功能将不可用。`
+  > *(The Master Database cannot be accessed. Features using the Master Database will not be available.)*
+* **为什么卸载重装也没用？**
+  卸载 Multisim 时，Windows **不会清除** `%AppData%\National Instruments\Circuit Design Suite` 下已损坏的用户配置文件（`config`）和 `C:\ProgramData\National Instruments` 下的数据库文件锁（`.ldb`）及只读权限。重装后依然会读取旧的损坏配置。
+* **对应脚本**：双击运行 **`2_Fix_Master_Database.bat`**（自动弹出管理员权限确认）：
+  1. 自动备份并重置 `%AppData%` 下残留损坏的 `config` 文件夹；
+  2. 自动扫描全盘（`C:` / `D:` / `E:` 等所有本地硬盘），清除数据库目录下的 `.ldb` 死锁文件与“只读”属性；
+  3. 自动为 `ProgramData` 与安装目录中的 `database` 赋予 `Users` 完全控制权限；
+  4. 自动排查并隔离冲突的第三方 DLL（`libeay32.dll` / `libiconv-2.dll` / `libpq.dll`），并将 `multisim.exe` 配置为默认以管理员身份启动。
+* **补充说明（Windows 11 用户）**：如果执行完上述修复后仍偶发该提示，通常是 Windows 11 近期累积更新（如 `KB5065426`）与 `14.3.0` 原版的兼容性问题，打开电脑上的 **NI Package Manager** 将 `Circuit Design Suite` 更新至官方修复版 **`14.3.3`** 即可彻底根治。
 
 ---
 
-## 文件列表
+### 3. 一键自动寻路安装简体中文语言包
+* **对应脚本**：双击运行 **`3_Install_Chinese_Pack.bat`**，自动查找 `Chinese-simplified` 语言包并复制到电脑上已安装的 `Circuit Design Suite 14.x\stringfiles` 目录中，无需手动翻找 `Program Files (x86)`。
+
+---
+
+## 目录结构
 
 ```text
-Multisim-Database-Fix/
-├── Fix_Multisim_Database.bat   # 双击运行的一键修复入口（纯 ASCII 批处理，无乱码）
-├── FixDatabase.cs              # 核心修复源码（使用 Windows 内置 .NET Framework 即时编译）
-├── LICENSE                     # MIT 开源协议
-└── README.md                   # 说明文档
+Multisim-Fix-Tool/
+├── 1_Fix_Installer_PackagesGz.bat   # 一键修复安装报 Packages.gz 无效
+├── 2_Fix_Master_Database.bat        # 一键修复“主数据库无法访问”（即使重装无效也能修）
+├── 3_Install_Chinese_Pack.bat       # 一键自动寻路安装简体中文包
+├── src/
+│   ├── FixInstaller.cs              # Packages.gz 重建核心源码 (C#)
+│   ├── FixDatabase.cs               # 数据库配置重置与权限修复核心源码 (C#)
+│   └── InstallChinese.cs            # 汉化包自动部署核心源码 (C#)
+├── LICENSE
+└── README.md
 ```
+
+## 技术特点
+* **零外部依赖**：直接调用 Windows 10 / 11 系统自带的 `.NET Framework 4.0` 编译器（`csc.exe`）即时编译运行，无需安装 Python、7-Zip 等任何第三方环境。
+* **规避 `cmd` 中文乱码坑**：所有 `.bat` 入口均为纯 ASCII 编码，杜绝 Windows 命令行 `chcp 65001` 引发的换行截断与闪退。
+* **自动 UAC 提权**：直接双击即可自动请求管理员权限，不会因为忘记右键“以管理员身份运行”而修复失败。
